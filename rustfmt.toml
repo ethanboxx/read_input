@@ -1,0 +1,5 @@
+format_macro_matchers = true
+
+format_macro_bodies = true
+
+merge_imports = true
