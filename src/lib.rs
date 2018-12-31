@@ -101,7 +101,7 @@ pub(crate) struct Test<T> {
     pub err: Option<String>,
 }
 
-/// `builder' used to store the settings that are used to fetch input.
+/// 'builder' used to store the settings that are used to fetch input.
 ///
 /// `.get()` method only takes these settings by reference so can be called multiple times.
 ///
@@ -137,6 +137,7 @@ impl<T: FromStr> InputBuilder<T> {
             default: Some(default),
         }
     }
+    // Internal function for adding tests and constraints.
     fn test_err_opt(self, func: Rc<Fn(&T) -> bool>, err: Option<String>) -> Self {
         Self {
             tests: {
@@ -245,7 +246,7 @@ where
     }
 }
 
-/// builder' used to store the settings that are used to fetch input.
+/// 'builder' used to store the settings that are used to fetch input.
 ///
 /// `.get()` method takes ownership of the settings so can be called only once without cloning.
 ///
@@ -266,6 +267,7 @@ impl<T: FromStr> InputBuilderOnce<T> {
             &*self.builder.err_match,
         )
     }
+    // Function that makes it less verbose to change settings of internal `InputBuilder`.
     fn internal<F>(self, with: F) -> Self
     where
         F: FnOnce(InputBuilder<T>) -> InputBuilder<T>,
