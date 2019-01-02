@@ -12,7 +12,13 @@ mod test_generators;
 mod tests;
 
 use crate::{core::read_input, test_generators::InsideFunc};
-use std::{cmp::PartialOrd, rc::Rc, str::FromStr, string::ToString};
+use std::{
+    cmp::PartialOrd,
+    fmt::{self, Debug, Formatter},
+    rc::Rc,
+    str::FromStr,
+    string::ToString,
+};
 
 const DEFAULT_ERR: &str = "That value does not pass. Please try again";
 
@@ -88,7 +94,7 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Prompt {
     pub msg: String,
     pub repeat: bool,
@@ -98,6 +104,15 @@ pub(crate) struct Prompt {
 pub(crate) struct Test<T> {
     pub func: Rc<Fn(&T) -> bool>,
     pub err: Option<String>,
+}
+
+impl<T> Debug for Test<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        fmt.debug_struct("Test")
+            .field("func", &String::from("Can't display function."))
+            .field("err", &self.err)
+            .finish()
+    }
 }
 
 /// 'builder' used to store the settings that are used to fetch input.
@@ -214,6 +229,17 @@ impl<T: FromStr + Clone> Clone for InputBuilder<T> {
     }
 }
 
+impl<T: FromStr> Debug for InputBuilder<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        fmt.debug_struct("InputBuilder")
+            .field("msg", &self.msg)
+            .field("err", &self.err)
+            .field("tests", &self.tests)
+            .field("err_match", &String::from("Can't display function."))
+            .finish()
+    }
+}
+
 /// 'builder' used to store the settings that are used to fetch input.
 ///
 /// `.get()` method takes ownership of the settings so can be called only once without cloning.
@@ -298,5 +324,14 @@ where
             default: self.default.clone(),
             builder: self.builder.clone(),
         }
+    }
+}
+
+impl<T: FromStr + Debug> Debug for InputBuilderOnce<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        fmt.debug_struct("InputBuilderOnce")
+            .field("builder", &self.builder)
+            .field("default", &self.default)
+            .finish()
     }
 }
