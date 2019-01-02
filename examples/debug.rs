@@ -14,7 +14,7 @@ fn main() {
             .err("That does not look like a number. Please try again")
     );
     println!(
-        "{:#?}",
+        "{:?}",
         input()
             .repeat_msg("Please input your guess: ")
             .inside_err(..=100, "That number is more than 100. Please try again")
