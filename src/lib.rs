@@ -45,6 +45,11 @@ pub trait InputBuild<T: FromStr> {
     fn inside_err<U: InsideFunc<T>>(self, constraint: U, err: impl ToString) -> Self;
     /// Toggles whether a prompt message gets printed once or each time input is requested.
     fn toggle_msg_repeat(self) -> Self;
+    fn map<F, U, R>(self) -> U
+    where
+        R: FromStr,
+        U: InputBuild<R>,
+        F: Fn(T) -> Result<U, String> + 'static;
 }
 
 /// Trait for changing input settings by adding constraints that require `PartialOrd`
@@ -110,6 +115,7 @@ pub struct InputBuilder<T: FromStr> {
     err: String,
     tests: Vec<Test<T>>,
     err_match: Rc<Fn(&T::Err) -> Option<String>>,
+    map: Rc<Fn(T) -> Result<U, String>>,
 }
 
 impl<T: FromStr> InputBuilder<T> {
