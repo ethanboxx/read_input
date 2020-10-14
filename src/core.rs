@@ -1,36 +1,36 @@
-use crate::{Prompt, Test};
+use crate::{Inputtable, Prompt, Test};
 use std::{
+    ffi::OsString,
     io::{self, Write},
-    str::FromStr,
     string::ToString,
 };
 
 // Core function when running `.get()`.
-pub(crate) fn read_input<T: FromStr>(
+pub(crate) fn read_input<T: Inputtable>(
     prompt: &Prompt,
     err: &str,
     default: Option<T>,
     tests: &[Test<T>],
-    err_pass: &dyn Fn(&T::Err) -> Option<String>,
+    err_pass: &dyn Fn(&T::Failure) -> Option<String>,
 ) -> io::Result<T> {
     // Flush only when possible.
     fn try_flush() {
         io::stdout().flush().unwrap_or(())
     }
 
-    fn input_as_string() -> io::Result<String> {
-        let mut input = String::new();
+    fn input_as_osstring() -> io::Result<OsString> {
+        let mut input = Vec::new();
         io::stdin().read_line(&mut input)?;
-        Ok(input)
+        Ok(input.as_ref().into())
     }
 
     print!("{}", prompt.msg);
     try_flush();
 
     loop {
-        let input = input_as_string()?;
+        let input = input_as_osstring()?;
 
-        if input.trim().is_empty() {
+        if input.is_empty() {
             if let Some(x) = default {
                 return Ok(x);
             }
@@ -48,13 +48,13 @@ pub(crate) fn read_input<T: FromStr>(
     }
 }
 
-pub(crate) fn parse_input<T: FromStr>(
-    input: String,
+pub(crate) fn parse_input<T: Inputtable>(
+    input: OsString,
     err: &str,
     tests: &[Test<T>],
-    err_pass: &dyn Fn(&T::Err) -> Option<String>,
+    err_pass: &dyn Fn(&T::Failure) -> Option<String>,
 ) -> Result<T, String> {
-    match T::from_str(&input.trim()) {
+    match T::input_attempt(input) {
         Ok(value) => {
             for test in tests {
                 if !(test.func)(&value) {

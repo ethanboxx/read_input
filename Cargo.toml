@@ -19,3 +19,6 @@ dont_disappear = "3"
 rand = "0.7"
 chrono = "0.4"
 url = "2.1"
+
+[dependencies]
+num-traits = "0.2.12"

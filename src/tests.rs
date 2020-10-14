@@ -1,8 +1,13 @@
-use crate::{core::parse_input, shortcut::input, InputBuild, InputBuilder};
+use crate::{core::parse_input, shortcut::input, InputBuild, InputBuilder, Inputtable};
 use std::str::FromStr;
 
-fn parse_with_builder<T: FromStr>(builder: InputBuilder<T>, input: String) -> Result<T, String> {
-    parse_input(input, &builder.err, &builder.tests, &*builder.err_match)
+fn parse_with_builder<T: Inputtable>(builder: InputBuilder<T>, input: String) -> Result<T, String> {
+    parse_input(
+        input.into(),
+        &builder.err,
+        &builder.tests,
+        &*builder.err_match,
+    )
 }
 
 #[test]

@@ -1,24 +1,28 @@
 //! Go the the [readme](https://crates.io/crates/read_input) file for extra documentation and tutorial.
 
-#![deny(clippy::pedantic, missing_docs)]
+#![feature(int_error_matching)]
+// #![deny(clippy::pedantic, missing_docs)]
 #![allow(clippy::must_use_candidate)]
 // `impl ToString` is better than `&impl ToString`. Clippy is not ready for impl trait.
 #![allow(clippy::needless_pass_by_value)]
 
 mod core;
+mod inputtable;
 pub mod prelude;
 pub mod shortcut;
 mod test_generators;
 #[cfg(test)]
 mod tests;
 
+pub use inputtable::Inputtable;
+
 use crate::{core::read_input, test_generators::InsideFunc};
-use std::{cmp::PartialOrd, io, rc::Rc, str::FromStr, string::ToString};
+use std::{cmp::PartialOrd, io, rc::Rc, string::ToString};
 
 const DEFAULT_ERR: &str = "That value does not pass. Please try again";
 
 /// Trait for comman types that store input settings.
-pub trait InputBuild<T: FromStr> {
+pub trait InputBuild<T: Inputtable> {
     /// Changes or adds a prompt message that gets printed once when input if fetched.
     fn msg(self, msg: impl ToString) -> Self;
     /// Changes or adds a prompt message and that is repeated each time input is requested.
@@ -38,7 +42,7 @@ pub trait InputBuild<T: FromStr> {
     /// Used specify custom error messages that depend on the errors produced by `from_str()`.
     fn err_match<F>(self, err_match: F) -> Self
     where
-        F: Fn(&T::Err) -> Option<String> + 'static;
+        F: Fn(&T::Failure) -> Option<String> + 'static;
     /// Ensures that input is within a range, array or vector.
     fn inside<U: InsideFunc<T>>(self, constraint: U) -> Self;
     /// Ensures that input is within a range, array or vector with a custom error message
@@ -52,7 +56,7 @@ pub trait InputBuild<T: FromStr> {
 /// on the input type.
 pub trait InputConstraints<T>: InputBuild<T>
 where
-    T: FromStr + PartialOrd + 'static,
+    T: Inputtable + PartialOrd + 'static,
     Self: Sized,
 {
     /// Sets a minimum input value.
@@ -106,14 +110,14 @@ pub(crate) struct Test<T> {
 /// `.get()` method only takes these settings by reference so can be called multiple times.
 ///
 /// This type does not have support for default input value.
-pub struct InputBuilder<T: FromStr> {
+pub struct InputBuilder<T: Inputtable> {
     msg: Prompt,
     err: String,
     tests: Vec<Test<T>>,
-    err_match: Rc<dyn Fn(&T::Err) -> Option<String>>,
+    err_match: Rc<dyn Fn(&T::Failure) -> Option<String>>,
 }
 
-impl<T: FromStr> InputBuilder<T> {
+impl<T: Inputtable> InputBuilder<T> {
     /// Creates a new instance of `InputBuilder` with default settings.
     pub fn new() -> Self {
         Self {
@@ -154,7 +158,7 @@ impl<T: FromStr> InputBuilder<T> {
     }
 }
 
-impl<T: FromStr> InputBuild<T> for InputBuilder<T> {
+impl<T: Inputtable> InputBuild<T> for InputBuilder<T> {
     fn msg(mut self, msg: impl ToString) -> Self {
         self.msg = Prompt {
             msg: msg.to_string(),
@@ -189,7 +193,7 @@ impl<T: FromStr> InputBuild<T> for InputBuilder<T> {
     }
     fn err_match<F>(mut self, err_match: F) -> Self
     where
-        F: Fn(&T::Err) -> Option<String> + 'static,
+        F: Fn(&T::Failure) -> Option<String> + 'static,
     {
         self.err_match = Rc::new(err_match);
         self
@@ -206,15 +210,15 @@ impl<T: FromStr> InputBuild<T> for InputBuilder<T> {
     }
 }
 
-impl<T: FromStr + PartialOrd + 'static> InputConstraints<T> for InputBuilder<T> {}
+impl<T: Inputtable + PartialOrd + 'static> InputConstraints<T> for InputBuilder<T> {}
 
-impl<T: FromStr> Default for InputBuilder<T> {
+impl<T: Inputtable> Default for InputBuilder<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: FromStr + Clone> Clone for InputBuilder<T> {
+impl<T: Inputtable + Clone> Clone for InputBuilder<T> {
     fn clone(&self) -> Self {
         Self {
             msg: self.msg.clone(),
@@ -230,12 +234,12 @@ impl<T: FromStr + Clone> Clone for InputBuilder<T> {
 /// `.get()` method takes ownership of the settings so can be called only once without cloning.
 ///
 /// This type has support for default input value.
-pub struct InputBuilderOnce<T: FromStr> {
+pub struct InputBuilderOnce<T: Inputtable> {
     builder: InputBuilder<T>,
     default: Option<T>,
 }
 
-impl<T: FromStr> InputBuilderOnce<T> {
+impl<T: Inputtable> InputBuilderOnce<T> {
     /// 'gets' the input form the user.
     ///
     /// Panics if unable to read input line.
@@ -268,7 +272,7 @@ impl<T: FromStr> InputBuilderOnce<T> {
     }
 }
 
-impl<T: FromStr> InputBuild<T> for InputBuilderOnce<T> {
+impl<T: Inputtable> InputBuild<T> for InputBuilderOnce<T> {
     fn msg(self, msg: impl ToString) -> Self {
         self.internal(|x| x.msg(msg))
     }
@@ -292,7 +296,7 @@ impl<T: FromStr> InputBuild<T> for InputBuilderOnce<T> {
     }
     fn err_match<F>(self, err_match: F) -> Self
     where
-        F: Fn(&T::Err) -> Option<String> + 'static,
+        F: Fn(&T::Failure) -> Option<String> + 'static,
     {
         self.internal(|x| x.err_match(err_match))
     }
@@ -307,11 +311,11 @@ impl<T: FromStr> InputBuild<T> for InputBuilderOnce<T> {
     }
 }
 
-impl<T: FromStr + PartialOrd + 'static> InputConstraints<T> for InputBuilderOnce<T> {}
+impl<T: Inputtable + PartialOrd + 'static> InputConstraints<T> for InputBuilderOnce<T> {}
 
 impl<T> Clone for InputBuilderOnce<T>
 where
-    T: Clone + FromStr,
+    T: Clone + Inputtable,
 {
     fn clone(&self) -> Self {
         Self {
